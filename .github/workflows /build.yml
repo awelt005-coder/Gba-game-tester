@@ -1,0 +1,44 @@
+name: Build GBA ROM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Get project
+        uses: actions/checkout@v4
+
+      - name: Get GBA CMake toolchain
+        run: |
+          git clone --depth 1 https://github.com/felixjones/gba-toolchain.git /tmp/gba-toolchain
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            --toolchain=/tmp/gba-toolchain/cmake/gba.toolchain.cmake
+
+      - name: Build
+        run: |
+          cmake --build build
+
+      - name: Install ROM
+        run: |
+          cmake --install build --prefix "$GITHUB_WORKSPACE/output"
+          find . -name "*.gba" -print
+
+      - name: Upload GBA ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: gba-test-rom
+          path: |
+            output/**/*.gba
+            build/**/*.gba
+          if-no-files-found: error
